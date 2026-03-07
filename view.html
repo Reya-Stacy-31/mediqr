@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediQR Emergency View</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #f1f5f9; display: flex; justify-content: center; }
+        .card { background: white; padding: 25px; border-radius: 15px; width: 100%; max-width: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .emergency-header { background: #dc2626; color: white; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 20px; }
+        .blood { font-size: 45px; font-weight: bold; }
+        .label { color: #64748b; font-size: 12px; font-weight: bold; text-transform: uppercase; }
+        .value { font-size: 18px; color: #1e293b; margin-bottom: 15px; font-weight: 600; }
+        .hidden-tier { display: none; background: #fff7ed; padding: 15px; border-radius: 10px; margin-top: 15px; border: 1px dashed #f97316; }
+        .btn-unlock { width: 100%; padding: 15px; background: #1e293b; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .btn-call { display: block; background: #2563eb; color: white; text-align: center; padding: 15px; text-decoration: none; border-radius: 8px; font-weight: bold; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="card" id="mainBody">Loading Cloud Record...</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-lite.js";
+
+    const firebaseConfig = {
+        apiKey: "YOUR_WEB_API_KEY",
+        authDomain: "mediqrcard.firebaseapp.com",
+        projectId: "mediqrcard",
+        appId: "YOUR_APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = urlParams.get("id");
+
+    if (id) {
+        try {
+            const snap = await getDoc(doc(db, "patients", id));
+            if (snap.exists()) {
+                const p = snap.data();
+                document.getElementById('mainBody').innerHTML = `
+                    <div class="emergency-header">
+                        <div class="label" style="color:white">Blood Group</div>
+                        <div class="blood">${p.blood}</div>
+                    </div>
+                    <div class="label">Name</div><div class="value">${p.name}</div>
+                    <div class="label">Age</div><div class="value">${p.age}</div>
+                    
+                    <a href="tel:${p.contact}" class="btn-call">📞 CALL EMERGENCY CONTACT</a>
+                    
+                    <button class="btn-unlock" id="unlockBtn">🔓 UNLOCK MEDICAL HISTORY</button>
+                    
+                    <div id="secretArea" class="hidden-tier">
+                        <div class="label">Aadhaar</div><div class="value">${p.aadhar}</div>
+                        <div class="label">Medical History</div><div class="value">${p.meds}</div>
+                    </div>
+                `;
+
+                document.getElementById('unlockBtn').onclick = () => {
+                    if (prompt("Enter 4-Digit Patient PIN:") === p.pin) {
+                        document.getElementById('secretArea').style.display = "block";
+                        document.getElementById('unlockBtn').style.display = "none";
+                    } else {
+                        alert("Access Denied: Incorrect PIN");
+                    }
+                };
+            }
+        } catch (e) { document.getElementById('mainBody').innerText = "Error loading record."; }
+    }
+</script>
+</body>
+</html>

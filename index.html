@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediQR Card Login</title>
+
+<style>
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+}
+
+body,html{
+height:100%;
+width:100%;
+overflow:hidden;
+}
+
+body{
+background-image:url("QR-Integrated-Medical-Data.png");
+background-repeat:no-repeat;
+background-position:center;
+background-size:100% 100%;
+background-color:#062a4f;
+
+display:flex;
+justify-content:center;
+align-items:center;
+}
+
+.login-box{
+width:260px;
+text-align:center;
+transform:translateY(15px);
+}
+
+.login-box input{
+width:100%;
+padding:10px 12px;
+margin:5px 0;
+border:none;
+border-radius:4px;
+background:#f0f4f8;
+font-size:14px;
+outline:none;
+}
+
+.login-box button{
+width:100%;
+padding:10px;
+margin-top:5px;
+border:none;
+border-radius:4px;
+background:#3b82f6;
+color:white;
+font-size:15px;
+font-weight:600;
+cursor:pointer;
+transition:background 0.3s;
+}
+
+.login-box button:hover{
+background:#2563eb;
+}
+
+.links{
+margin-top:10px;
+}
+
+.links a{
+display:block;
+text-decoration:none;
+color:#3b82f6;
+font-size:12px;
+margin-top:3px;
+}
+
+.links a:hover{
+text-decoration:underline;
+}
+</style>
+</head>
+
+<body>
+
+<div class="login-box">
+
+<input type="email" id="email" placeholder="Email" autocomplete="off">
+<input type="password" id="password" placeholder="Password" autocomplete="new-password">
+
+<button onclick="login()">Login</button>
+
+<div class="links">
+<a href="#">Forgot Password?</a>
+<a href="#" onclick="signup()">Create Account</a>
+</div>
+
+</div>
+
+<!-- Firebase Script -->
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword }
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+
+const firebaseConfig = {
+apiKey: "AIzaSyAnSxAvlAvjmG6ttVXIZU27yXHmLjcC5zw",
+authDomain: "mediqrcard.firebaseapp.com",
+projectId: "mediqrcard",
+storageBucket: "mediqrcard.firebasestorage.app",
+messagingSenderId: "440349102167",
+appId: "1:440349102167:web:c55317c30e1d856c0fd312",
+measurementId: "G-5VK4P2B9LZ"
+};
+
+
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+const auth = getAuth(app);
+
+
+window.login = function() {
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+
+        signInWithEmailAndPassword(auth, email, password)
+            .then((userCredential) => {
+                // Successful login
+                console.log("Logged in:", userCredential.user);
+                window.location.href = "dashboard.html"; // Redirect to dashboard
+            })
+            .catch((error) => {
+                alert("Login Failed: " + error.message);
+            });
+    }
+
+
+window.signup = function(){
+
+const email=document.getElementById("email").value;
+const password=document.getElementById("password").value;
+
+createUserWithEmailAndPassword(auth,email,password)
+.then((userCredential)=>{
+
+alert("Account Created Successfully");
+
+})
+.catch((error)=>{
+
+alert(error.message);
+
+});
+
+}
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediQR Profile</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
+        body {
+            height: 100vh;
+            background: #1a1a1a url("QR-Integrated-Medical-Data2.png") no-repeat center;
+            background-size: cover;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .center-strip {
+            width: 420px; height: 100vh;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+        }
+        .form-box { width: 330px; }
+        .form-box h2 { text-align: center; margin-bottom: 20px; color: #1e40af; }
+        .form-box input, .form-box textarea, .form-box select {
+            width: 100%; padding: 10px; margin: 6px 0;
+            border: 1px solid #ccc; border-radius: 6px;
+            background: #fff; font-size: 14px;
+        }
+        textarea { resize: none; height: 50px; }
+        
+        #submitBtn {
+            width: 100%; padding: 12px; margin-top: 12px;
+            border: none; border-radius: 6px;
+            background: #3b82f6; color: white;
+            font-size: 15px; font-weight: 600;
+            cursor: pointer; display: none;
+        }
+
+        /* Modal/Popup Styles */
+        #popupOverlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            justify-content: center; align-items: center;
+            z-index: 1000;
+        }
+        .popup-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            width: 360px;
+            text-align: center;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+        }
+        .popup-content h3 { color: #16a34a; margin-bottom: 25px; font-size: 22px; }
+
+        .action-card {
+            border-radius: 10px;
+            padding: 15px;
+            margin: 12px 0;
+            cursor: pointer;
+            font-weight: 700;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+            border: none;
+            display: block;
+            width: 100%;
+        }
+
+        .qr-card {
+            background-color: #2563eb;
+            color: white;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+        }
+        .qr-card:hover {
+            background-color: #1d4ed8;
+            transform: translateY(-3px);
+        }
+
+        .logout-card {
+            background-color: #dc2626;
+            color: white;
+            box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3);
+        }
+        .logout-card:hover {
+            background-color: #b91c1c;
+            transform: translateY(-3px);
+        }
+
+        #qrcode { 
+            margin-top: 20px; 
+            padding: 10px;
+            background: white;
+            display: inline-block;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="center-strip">
+    <div class="form-box">
+        <h2>MediQR Profile</h2>
+        <input type="text" id="name" placeholder="Full Name" onkeyup="window.checkForm()">
+        <input type="number" id="age" placeholder="Age" onkeyup="window.checkForm()">
+        <select id="blood" onchange="window.checkForm()">
+            <option value="">Select Blood Group</option>
+            <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+            <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+        </select>
+        <input type="text" id="aadhar" placeholder="Aadhaar Number" maxlength="14" onkeyup="window.formatAadhar()">
+        <textarea id="allergies" placeholder="Allergies" onkeyup="window.checkForm()"></textarea>
+        <textarea id="conditions" placeholder="Medical Conditions" onkeyup="window.checkForm()"></textarea>
+        <textarea id="medication" placeholder="Current Medication" onkeyup="window.checkForm()"></textarea>
+        <input type="tel" id="contact1" placeholder="Emergency Contact 1" maxlength="10" onkeyup="window.checkForm()">
+        <input type="tel" id="contact2" placeholder="Emergency Contact 2" maxlength="10" onkeyup="window.checkForm()">
+
+        <button id="submitBtn" onclick="window.saveData()">Submit</button>
+    </div>
+</div>
+
+<div id="popupOverlay">
+    <div class="popup-content">
+        <h3>✔ Record Saved!</h3>
+        <button class="action-card qr-card" onclick="window.generateQR()">Generate QR Code</button>
+        <button class="action-card logout-card" onclick="window.logout()">Logout</button>
+        <div id="qrcode"></div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-lite.js";
+
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY", 
+        authDomain: "mediqrcard.firebaseapp.com",
+        projectId: "mediqrcard",
+        storageBucket: "mediqrcard.appspot.com",
+        messagingSenderId: "440349102167",
+        appId: "YOUR_APP_ID" 
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    window.saveData = async function() {
+        const btn = document.getElementById("submitBtn");
+        btn.innerText = "Processing...";
+        btn.disabled = true;
+
+        const data = {
+            name: document.getElementById("name").value,
+            age: document.getElementById("age").value,
+            blood: document.getElementById("blood").value,
+            aadhar: document.getElementById("aadhar").value,
+            allergies: document.getElementById("allergies").value,
+            conditions: document.getElementById("conditions").value,
+            medication: document.getElementById("medication").value,
+            contact1: document.getElementById("contact1").value,
+            contact2: document.getElementById("contact2").value,
+            createdAt: new Date().toISOString()
+        };
+
+        try {
+            const docRef = await addDoc(collection(db, "patients"), data);
+            window.savedID = docRef.id;
+            document.getElementById("popupOverlay").style.display = "flex";
+        } catch (error) {
+            alert("Error: " + error.message);
+            btn.innerText = "Submit";
+            btn.disabled = false;
+        }
+    };
+
+    window.generateQR = function() {
+        const qrBox = document.getElementById("qrcode");
+        qrBox.innerHTML = "";
+        
+        // --- CLOUD URL LOGIC ---
+        // Change the URL below to your actual Firebase Hosting URL once deployed
+        const cloudURL = "https://mediqrcard.web.app/view.html?id=" + window.savedID;
+        
+        new QRCode(qrBox, {
+            text: cloudURL,
+            width: 180, height: 180
+        });
+        console.log("QR Code generated for: " + cloudURL);
+    };
+
+
+    // Helper functions for UI
+    window.formatAadhar = function() {
+        let input = document.getElementById("aadhar");
+        let val = input.value.replace(/\D/g, '').substring(0, 12);
+        let parts = val.match(/.{1,4}/g);
+        input.value = parts ? parts.join(" ") : "";
+        window.checkForm();
+    };
+
+    window.checkForm = function() {
+        const name = document.getElementById("name").value.trim();
+        const contact = document.getElementById("contact1").value.trim();
+        document.getElementById("submitBtn").style.display = (name && contact.length === 10) ? "block" : "none";
+    };
+
+    window.logout = function() { window.location.href = "login.html"; };
+</script>
+</body>
+</html>

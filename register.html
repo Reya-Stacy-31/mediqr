@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediQR Profile Registration</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
+        #welcome-overlay .popup-content {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        body {
+            height: 100vh;
+            background: #1a1a1a url("QR-Integrated-Medical-Data2.png") no-repeat center;
+            background-size: cover;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .center-strip {
+            width: 420px;
+            height: 100vh;
+            background: rgba(255, 255, 255, 0.95);
+            /* Change flex to block to allow natural scrolling from the top */
+            display: block; 
+            overflow-y: auto;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            margin: 0 auto; /* Centers the strip horizontally */
+        }
+        .form-box { 
+            width: 330px;
+            padding: 40px 0; /* Increased top/bottom padding for breathing room */
+            margin: 0 auto;  /* Centers the form inside the strip */
+        }
+        .form-box h2 { text-align: center; margin-bottom: 15px; color: #1e40af; }
+        .form-box input, .form-box textarea, .form-box select {
+            width: 100%; padding: 10px; margin: 5px 0;
+            border: 1px solid #ccc; border-radius: 6px;
+            background: #fff; font-size: 13px;
+        }
+        textarea { resize: none; height: 45px; }
+        .section-label { font-size: 11px; color: #1e40af; font-weight: bold; margin-top: 8px; text-transform: uppercase; }
+        .pin-label { color: #dc2626; }
+        
+        #submitBtn {
+            width: 100%; padding: 12px; margin-top: 15px;
+            border: none; border-radius: 6px;
+            background: #3b82f6; color: white;
+            font-size: 15px; font-weight: 600;
+            cursor: pointer; display: none;
+        }
+
+        #popup-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); justify-content: center; align-items: center; z-index: 1000;
+        }
+        .popup-content {
+            background: white; padding: 40px 30px; border-radius: 16px;
+            width: 350px; text-align: center; position: relative;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+        }
+        .card-container { display: flex; flex-direction: column; gap: 15px; margin-top: 25px; }
+        .card { width: 100%; padding: 16px; border-radius: 10px; cursor: pointer; font-weight: 700; color: white; border: none; }
+        .card-blue { background: #0ea5e9; }
+        .card-red { background: #ef4444; }
+        #qr-display-area { display: none; }
+        #qrcode { display: flex; justify-content: center; margin: 20px 0; }
+        .download-btn {
+            position: absolute; top: 15px; right: 15px; cursor: pointer;
+            background: #f1f5f9; border: none; width: 40px; height: 40px; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+        }
+    </style>
+</head>
+<body>
+
+<div id="welcome-overlay" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); justify-content: center; align-items: center; z-index: 2000;">
+    <div class="popup-content">
+        <h2 style="color:#1e40af;">Registration Note</h2>
+        <p style="margin: 15px 0; color: #444; line-height: 1.5;">
+            Please fill in <b>all the fields</b> to enable the <b>Submit</b> button. 
+            Ensure your Aadhaar and Phone numbers are correct.
+        </p>
+        <button class="card card-blue" onclick="document.getElementById('welcome-overlay').style.display='none'">Got it!</button>
+    </div>
+</div>
+
+<div class="center-strip">
+    <div class="form-box">
+        <h2>MediQR Profile</h2>
+        
+        <input type="text" id="name" placeholder="Full Name" onkeyup="window.checkForm()">
+        <input type="tel" id="phone" placeholder="Patient Phone Number (10 digits)" maxlength="10" onkeyup="window.checkForm()">
+        <input type="number" id="age" placeholder="Age (0-125)" min="0" max="125" oninput="window.validateAge(this)" onkeyup="window.checkForm()">
+
+        <select id="blood" onchange="window.checkForm()">
+            <option value="">Select Blood Group</option>
+            <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+            <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+        </select>
+
+        <input type="text" id="aadhar" placeholder="Aadhaar Number" maxlength="14" onkeyup="window.formatAadhar()">
+        <textarea id="allergies" placeholder="Allergies (Type 'None' if none)" onkeyup="window.checkForm()"></textarea>
+        <textarea id="conditions" placeholder="Medical Conditions (Type 'None' if none)" onkeyup="window.checkForm()"></textarea>
+        <textarea id="medication" placeholder="Current Medication (Type 'None' if none)" onkeyup="window.checkForm()"></textarea>
+
+        <p class="section-label">Emergency Contact 1</p>
+        <input type="text" id="cname1" placeholder="Contact Name 1" onkeyup="window.checkForm()">
+        <input type="tel" id="cphone1" placeholder="Contact Phone 1 (10 digits)" maxlength="10" onkeyup="window.checkForm()">
+        <input type="text" id="crel1" placeholder="Relationship (e.g. Mother, Spouse)" onkeyup="window.checkForm()">
+
+        <p class="section-label">Emergency Contact 2</p>
+        <input type="text" id="cname2" placeholder="Contact Name 2" onkeyup="window.checkForm()">
+        <input type="tel" id="cphone2" placeholder="Contact Phone 2 (10 digits)" maxlength="10" onkeyup="window.checkForm()">
+        <input type="text" id="crel2" placeholder="Relationship (e.g. Friend, Brother)" onkeyup="window.checkForm()">
+
+        <p class="section-label pin-label">Security Lock (Tier 2)</p>
+        <input type="password" id="pin" placeholder="Set 6-Digit Security PIN" maxlength="6" onkeyup="window.checkForm()">
+
+        <button id="submitBtn" onclick="window.saveData()">Submit</button>
+    </div>
+</div>
+
+<div id="popup-overlay">
+    <div class="popup-content">
+        <div id="options-screen">
+            <h2 style="color:#16a34a;">✔ Record Saved!</h2>
+            <div class="card-container">
+                <button class="card card-blue" onclick="window.generateQR()">Generate QR Code</button>
+                <button class="card card-red" onclick="window.logout()">Logout</button>
+            </div>
+        </div>
+        <div id="qr-display-area">
+            <button class="download-btn" onclick="window.downloadQR()">📥</button>
+            <h3 style="color:#1e40af; margin-top: 10px;">Your MediQR</h3>
+            <div id="qrcode"></div>
+            <button class="card card-red" onclick="window.logout()">Logout</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-lite.js";
+
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY", 
+        authDomain: "mediqrcard.firebaseapp.com",
+        projectId: "mediqrcard",
+        appId: "YOUR_APP_ID" 
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    window.validateAge = function(input) {
+        if (input.value !== "") {
+            let val = parseInt(input.value);
+            if (val < 0) input.value = 0;
+            if (val > 125) input.value = 125;
+        }
+    };
+
+    window.checkForm = function() {
+        // Collect all inputs
+        const name = document.getElementById("name").value.trim();
+        const phone = document.getElementById("phone").value.trim();
+        const age = document.getElementById("age").value.trim();
+        const blood = document.getElementById("blood").value;
+        const aadhar = document.getElementById("aadhar").value.trim();
+        const allergies = document.getElementById("allergies").value.trim();
+        const conditions = document.getElementById("conditions").value.trim();
+        const medication = document.getElementById("medication").value.trim();
+        const cname1 = document.getElementById("cname1").value.trim();
+        const cphone1 = document.getElementById("cphone1").value.trim();
+        const cname2 = document.getElementById("cname2").value.trim();
+        const cphone2 = document.getElementById("cphone2").value.trim();
+        const pin = document.getElementById("pin").value.trim();
+        const crel1 = document.getElementById("crel1").value.trim();
+        const crel2 = document.getElementById("crel2").value.trim();
+
+        // Specific Validation checks
+        const isAgeValid = age !== "" && parseInt(age) >= 0 && parseInt(age) <= 125;
+        const isPhoneValid = phone.length === 10;
+        const isCPhone1Valid = cphone1.length === 10;
+        const isCPhone2Valid = cphone2.length === 10;
+        const isAadharValid = aadhar.length === 14; // Including spaces (4 4 4)
+        const isPinValid = pin.length === 6;
+
+        // Check if ANY field is blank
+        const allFilled = (name && phone && age && blood && aadhar && allergies && conditions && medication && cname1 && cphone1 && cname2 && cphone2 && pin && crel1 && crel2);
+
+        // All conditions must be met
+        const isReady = (allFilled && isAgeValid && isPhoneValid && isCPhone1Valid && isCPhone2Valid && isAadharValid && isPinValid);
+        
+        document.getElementById("submitBtn").style.display = isReady ? "block" : "none";
+    };
+
+    window.saveData = async function() {
+        const btn = document.getElementById("submitBtn");
+        const aadharVal = document.getElementById("aadhar").value;
+        const p1 = document.getElementById("cphone1").value;
+        const p2 = document.getElementById("cphone2").value;
+
+        if (p1 === p2) {
+            alert("Emergency contact numbers cannot be the same!");
+            return;
+        }
+
+        btn.innerText = "Checking duplicates...";
+        btn.disabled = true;
+
+        const q = query(collection(db, "patients"), where("aadhar", "==", aadharVal));
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+            alert("This Aadhaar number is already registered!");
+            btn.innerText = "Submit";
+            btn.disabled = false;
+            return;
+        }
+
+        btn.innerText = "Saving to Cloud...";
+        const data = {
+            name: document.getElementById("name").value,
+            phone: document.getElementById("phone").value,
+            age: parseInt(document.getElementById("age").value),
+            blood: document.getElementById("blood").value,
+            aadhar: aadharVal,
+            allergies: document.getElementById("allergies").value,
+            conditions: document.getElementById("conditions").value,
+            medication: document.getElementById("medication").value,
+            contact1_name: document.getElementById("cname1").value,
+            contact1_phone: p1,
+            contact1_rel: document.getElementById("crel1").value,
+            contact2_name: document.getElementById("cname2").value,
+            contact2_phone: p2,
+            contact2_rel: document.getElementById("crel2").value,
+            pin: document.getElementById("pin").value,
+            createdAt: new Date().toISOString()
+        };
+
+        try {
+            const docRef = await addDoc(collection(db, "patients"), data);
+            window.savedID = docRef.id;
+            document.getElementById("popup-overlay").style.display = "flex";
+        } catch (error) {
+            alert("Error: " + error.message);
+            btn.innerText = "Submit"; btn.disabled = false;
+        }
+    };
+
+    window.formatAadhar = function() {
+        let input = document.getElementById("aadhar");
+        let val = input.value.replace(/\D/g, '').substring(0, 12);
+        let parts = val.match(/.{1,4}/g);
+        input.value = parts ? parts.join(" ") : "";
+        window.checkForm();
+    };
+
+    window.generateQR = function() {
+        document.getElementById("options-screen").style.display = "none";
+        document.getElementById("qr-display-area").style.display = "block";
+        const qrBox = document.getElementById("qrcode");
+        qrBox.innerHTML = "";
+        const cloudURL = `https://reya-stacy-31.github.io/mediqr/view.html?id=${window.savedID}`;
+        new QRCode(qrBox, { text: cloudURL, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.H });
+    };
+
+    window.downloadQR = function() {
+        const img = document.querySelector("#qrcode img");
+        if (img) {
+            const link = document.createElement("a");
+            link.href = img.src;
+            link.download = "MediQR_Profile.png";
+            link.click();
+        }
+    };
+
+    window.logout = () => window.location.reload();
+</script>
+</body>
+</html>

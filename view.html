@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediQR Emergency View</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #f1f5f9; display: flex; justify-content: center; }
+        .card { background: white; padding: 25px; border-radius: 15px; width: 100%; max-width: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .emergency-header { background: #dc2626; color: white; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 20px; }
+        .blood { font-size: 45px; font-weight: bold; }
+        .label { color: #64748b; font-size: 11px; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
+        .value { font-size: 18px; color: #1e293b; margin-bottom: 15px; font-weight: 600; }
+        .allergy-badge { background: #fee2e2; color: #dc2626; padding: 8px; border-radius: 6px; border: 1px solid #fecaca; }
+        .contact-grid, .security-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        .access-card { 
+            display: flex; align-items: center; gap: 15px;
+            background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; 
+            border-radius: 10px; cursor: pointer; transition: all 0.2s;
+            width: 100%; box-sizing: border-box; text-decoration: none; color: inherit;
+        }
+        .access-card:hover { border-color: #3b82f6; background: #eff6ff; }
+        .icon-circle { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+        .rel-tag {
+            font-size: 11px; font-weight: 800; text-transform: uppercase;
+            color: #1e40af; background: #dbeafe; padding: 2px 8px; border-radius: 4px;
+            display: inline-block; margin-top: 4px;
+        }
+        .btn-unlock { background: #1e293b; color: white; font-weight: bold; justify-content: center; margin-top: 10px; border: none; }
+        .hidden-tier { display: none; background: #fff7ed; padding: 15px; border-radius: 10px; margin-top: 15px; border: 1px dashed #f97316; }
+    </style>
+</head>
+<body>
+    <div class="card" id="mainBody">Loading Profile...</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-lite.js";
+
+    // REPLACE WITH YOUR ACTUAL KEYS
+    const firebaseConfig = {
+        apiKey: "YOUR_FIREBASE_API_KEY",
+        authDomain: "mediqrcard.firebaseapp.com",
+        projectId: "mediqrcard",
+        appId: "YOUR_APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = urlParams.get("id");
+
+    const twilioSID = 'ACf35b73f90a9d0e2edd55ff6c7082df6a'; 
+    const twilioAuth = '4025016340a96ae90e2ae640b9c89893';
+    const twilioSender = 'whatsapp:+14155238886';
+
+    window.sendTwilioAlert = async (toPhone, pName, dName) => {
+        const auth = btoa(`${twilioSID}:${twilioAuth}`);
+        const message = `Emergency Alert: ${pName} has been admitted. Dr. ${dName} is requesting access to confidential records. Use PIN to verify.`;
+        
+        // Clean phone number: remove all non-digits
+        let cleanPhone = toPhone.replace(/\D/g, '');
+        
+        // Ensure it has a country code (Logic for India +91 if missing)
+        if (cleanPhone.length === 10) cleanPhone = "91" + cleanPhone;
+
+        try {
+            // Using a CORS Proxy for testing (cors-anywhere or similar)
+            // Note: Direct Twilio calls from frontend are usually blocked by CORS
+            const proxyUrl = 'https://corsproxy.io/?'; 
+            const targetUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioSID}/Messages.json`;
+
+            const response = await fetch(proxyUrl + encodeURIComponent(targetUrl), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Authorization': `Basic ${auth}`
+                },
+                body: new URLSearchParams({
+                    'To': `whatsapp:+${cleanPhone}`,
+                    'From': twilioSender,
+                    'Body': message
+                })
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                console.log("Twilio Success:", data.sid);
+            } else {
+                console.error("Twilio API Error:", data.message);
+            }
+        } catch (e) {
+            console.error("Fetch failed (Check CORS or Internet):", e);
+        }
+    };
+
+    window.showSecurityOptions = () => {
+        document.getElementById('unlockButtonArea').style.display = "none";
+        document.getElementById('securityGate').style.display = "block";
+    };
+
+    if (id) {
+        try {
+            const snap = await getDoc(doc(db, "patients", id));
+            if (snap.exists()) {
+                const p = snap.data();
+                document.getElementById('mainBody').innerHTML = `
+                    <div class="emergency-header">
+                        <div class="label" style="color:white; opacity: 0.9;">Blood Group</div>
+                        <div class="blood">${p.blood}</div>
+                    </div>
+                    
+                    <div class="label">Patient Name</div><div class="value">${p.name}</div>
+                    <div class="label">Age</div><div class="value">${p.age}</div>
+                    
+                    <div class="label" style="color:#dc2626">Allergies (Public)</div>
+                    <div class="value allergy-badge">${p.allergies || 'None Reported'}</div>
+
+                    <div class="label">Emergency Contacts</div>
+                    <div class="contact-grid">
+                        <a href="tel:${p.contact1_phone}" class="access-card">
+                            <div class="icon-circle" style="background:#dbeafe; color:#2563eb">📞</div>
+                            <div>
+                                <div style="font-weight:bold">${p.contact1_name}</div>
+                                <div class="rel-tag">${p.contact1_rel || 'Primary'}</div>
+                            </div>
+                        </a>
+                    </div>
+
+                    <div id="unlockButtonArea">
+                        <button class="access-card btn-unlock" onclick="window.showSecurityOptions()">
+                            🔒 UNLOCK MEDICAL HISTORY
+                        </button>
+                    </div>
+
+                    <div id="securityGate" style="display:none;">
+                        <div class="label">Choose Access Method</div>
+                        <div class="security-grid">
+                            <div class="access-card" id="familyBtn">
+                                <div class="icon-circle" style="background:#fef3c7; color:#d97706">🔑</div>
+                                <div><div style="font-weight:bold">Family Access</div><div style="font-size:12px; color:#64748b">Enter Secret PIN</div></div>
+                            </div>
+                            <div class="access-card" id="medicBtn">
+                                <div class="icon-circle" style="background:#dcfce7; color:#16a34a">🏥</div>
+                                <div><div style="font-weight:bold">Medical Practitioner</div><div style="font-size:12px; color:#64748b">Request Bypass</div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="secretArea" class="hidden-tier">
+                        <h3 style="color:#c2410c; font-size: 13px; margin-bottom: 10px; border-bottom: 1px solid #fed7aa; padding-bottom: 5px;">PROTECTED MEDICAL DATA</h3>
+                        <div class="label">Aadhaar Number</div><div class="value" style="font-family: monospace;">${p.aadhar}</div>
+                        <div class="label">Medical Conditions</div><div class="value">${p.conditions || 'None'}</div>
+                        <div class="label">Current Medication</div><div class="value">${p.medication || 'None'}</div>
+                    </div>
+                `;
+
+                // Re-bind events after HTML injection
+                document.getElementById('familyBtn').onclick = () => {
+                    const pin = prompt("Enter 6-Digit Secret PIN:");
+                    if (pin === p.pin) {
+                        document.getElementById('secretArea').style.display = "block";
+                        document.getElementById('securityGate').style.display = "none";
+                    } else { alert("Invalid PIN."); }
+                };
+
+                document.getElementById('medicBtn').onclick = async () => {
+                    const medicName = prompt("Enter Practitioner Name:");
+                    if (medicName) {
+                        alert("Alerting Emergency Contacts via WhatsApp...");
+                        
+                        // Execute alerts
+                        await window.sendTwilioAlert(p.contact1_phone, p.name, medicName);
+                        if(p.contact2_phone) await window.sendTwilioAlert(p.contact2_phone, p.name, medicName);
+
+                        const otp = prompt("Enter the PIN received by the Family:");
+                        if (otp === p.pin) {
+                            document.getElementById('secretArea').style.display = "block";
+                            document.getElementById('securityGate').style.display = "none";
+                        } else { alert("Invalid PIN."); }
+                    }
+                };
+
+            } else { document.getElementById('mainBody').innerHTML = "Record not found."; }
+        } catch (e) { document.getElementById('mainBody').innerHTML = "Connection Error."; }
+    }
+</script>
+</body>
+</html>

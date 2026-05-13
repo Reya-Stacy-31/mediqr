@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediQR Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        body {
+            height: 100vh;
+            background-image: url("QR-Integrated-Medical-Data2.png");
+            background-size: 100% 100%;
+            background-position: center;
+            background-repeat: no-repeat;
+            display: flex;
+            flex-direction: column; /* Changed to accommodate the top strip */
+            background-color: #062a4f;
+        }
+
+        /* --- GREETING STRIP STYLES --- */
+        .header-strip {
+            width: 100%;
+            padding: 15px 30px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .user-greeting {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .logout-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: #dc2626;
+        }
+
+        /* --- DASHBOARD CONTENT --- */
+        .content-area {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; padding: 20px; max-width: 1000px; }
+        
+        .card {
+            width: 220px; height: 140px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: 0.3s ease; padding: 15px;
+        }
+        
+        .card:hover { transform: scale(1.05); background: rgba(255, 255, 255, 1); }
+        .card h3 { font-size: 18px; color: #062a4f; text-align: center; }
+        .card p { font-size: 12px; margin-top: 8px; color: #444; text-align: center; }
+        .download-accent { border-bottom: 4px solid #3b82f6; }
+        .order-accent { border-bottom: 4px solid #16a34a; }
+    </style>
+</head>
+<body>
+
+<div class="header-strip">
+    <div class="user-greeting" id="greetingText">Loading...</div>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+</div>
+
+<div class="content-area">
+    <div class="container">
+        <div class="card" onclick="location.href='register.html'">
+            <h3>Create New MediQR</h3>
+            <p>Register medical emergency details</p>
+        </div>
+
+        <div class="card" onclick="location.href='edit.html'">
+            <h3>View / Edit MediQR</h3>
+            <p>View / Edit medical profile</p>
+        </div>
+
+        <div class="card download-accent" onclick="location.href='manage-qr.html'">
+            <h3>Download / Share MediQR</h3>
+            <p>View, Save, Share unique emergency QR code</p>
+        </div>
+
+        <div class="card order-accent" onclick="location.href='printQRCard.html'">
+            <h3>Order MediQRCard</h3>
+            <p>Get your physical emergency card printed</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 1. Authentication Check & Greeting Logic
+    window.onload = function() {
+        const userName = sessionStorage.getItem("userName");
+        
+        // Redirect if not logged in
+        if (!userName) {
+            window.location.href = "index.html";
+            return;
+        }
+
+        const greetingDiv = document.getElementById("greetingText");
+        const now = new Date();
+        const hour = now.getHours();
+        let timeGreeting = "";
+
+        // Determine Time of Day
+        if (hour < 12) {
+            timeGreeting = "Good Morning";
+        } else if (hour < 17) {
+            timeGreeting = "Good Afternoon";
+        } else if (hour < 21) {
+            timeGreeting = "Good Evening";
+        } else {
+            timeGreeting = "Good Night";
+        }
+
+        // Set the greeting text
+        greetingDiv.innerHTML = `${userName}, ${timeGreeting}!`;
+    };
+
+    // 2. Logout Logic
+    function logout() {
+        if(confirm("Are you sure you want to logout?")) {
+            sessionStorage.clear(); // Clear session data
+            window.location.href = "index.html"; // Redirect to login
+        }
+    }
+</script>
+
+</body>
+</html>

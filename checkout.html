@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediQR Secure Checkout</title>
+    <style>
+        body{
+            font-family:Segoe UI;
+            margin:0;
+            background-image:url("QR-integrated-Medical-Data2.png");
+            background-size:cover;
+            background-position:center;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            height:100vh;
+        }
+        .checkout-box{
+            width:420px;
+            background:white;
+            border-radius:18px;
+            box-shadow:0 25px 60px rgba(0,0,0,.35);
+            overflow:hidden;
+        }
+        .header{
+            background:linear-gradient(135deg,#0d47a1,#1976d2,#42a5f5);
+            color:white;
+            padding:20px;
+            text-align:center;
+        }
+        .content{
+            padding:25px;
+        }
+        .amount{
+            font-size:30px;
+            font-weight:700;
+            text-align:center;
+            margin-bottom:20px;
+        }
+        .tabs{
+            display:flex;
+            border-bottom:2px solid #eee;
+            margin-bottom:20px;
+        }
+        .tab{
+            flex:1;
+            text-align:center;
+            padding:10px;
+            cursor:pointer;
+            font-weight:600;
+        }
+        .tab.active{
+            color:#1976d2;
+            border-bottom:3px solid #1976d2;
+        }
+        .form-group{
+            margin-bottom:15px;
+        }
+        label{
+            font-size:14px;
+            display:block;
+            margin-bottom:4px;
+        }
+        input,select{
+            width:100%;
+            padding:10px;
+            border-radius:6px;
+            border:1px solid #ccc;
+            font-size:14px;
+        }
+        .pay-btn{
+            width:100%;
+            padding:12px;
+            background:#1976d2;
+            color:white;
+            border:none;
+            border-radius:6px;
+            font-weight:600;
+            cursor:pointer;
+            margin-top:10px;
+        }
+        .popupOverlay{
+            display:none;
+            position:fixed;
+            top:0;
+            left:0;
+            width:100%;
+            height:100%;
+            background:rgba(0,0,0,.45);
+            justify-content:center;
+            align-items:center;
+            z-index:999;
+        }
+        .popupCard{
+            background:white;
+            padding:30px;
+            border-radius:10px;
+            text-align:center;
+            width:320px;
+            box-shadow:0 15px 40px rgba(0,0,0,.4);
+        }
+        .popupCard input{
+            width:80%;
+            padding:10px;
+            font-size:18px;
+            text-align:center;
+            letter-spacing:4px;
+            margin:15px 0;
+        }
+        .successTick{
+            width:70px;
+            height:70px;
+            border-radius:50%;
+            background:#4caf50;
+            color:white;
+            font-size:40px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            margin:auto;
+            margin-bottom:15px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="checkout-box">
+    <div class="header">
+        <h2>MediQR Secure Checkout</h2>
+    </div>
+    <div class="content">
+        <div class="amount" id="amountDisplay">₹--</div>
+        <div style="text-align:center; font-size:12px; color:#666; margin-bottom:10px;">
+            <span id="patientDisplay"></span> <span id="quantityDisplay"></span>
+        </div>
+        <div class="tabs">
+            <div class="tab active" id="cardTab">CARDS</div>
+            <div class="tab" id="bankTab">NET BANKING</div>
+        </div>
+
+        <div id="cardForm">
+            <div class="form-group">
+                <label>Card Type</label>
+                <select id="cardType">
+                    <option value="">Select Card</option>
+                    <option>Credit Card</option>
+                    <option>Debit Card</option>
+                </select>
+            </div>
+            <div id="cardFields" style="display:none">
+                <div class="form-group">
+                    <label>Cardholder Name</label>
+                    <input type="text" id="cardName">
+                </div>
+                <div class="form-group">
+                    <label>Card Number</label>
+                    <input type="text" id="cardNumber" placeholder="0000 0000 0000 0000">
+                </div>
+                <!-- <div class="form-group">
+                    <label>Expiry (MM/YY) <span style="font-size:12px;color:#666;">(1-12 / 24-34)</span></label>
+                    <input type="text" id="expiry" placeholder="MM/YY">
+                </div> -->
+                <div class="form-group">
+                    <label>Expiry (MM/YY) <span id="yearHint" style="font-size:12px;color:#666;"></span></label>
+                    <input type="text" id="expiry" placeholder="MM/YY">
+                </div>
+                <div class="form-group">
+                    <label>CVV</label>
+                    <input type="password" id="cvv" maxlength="3" placeholder="3 digits">
+                </div>
+                <button class="pay-btn" id="cardPay">Pay Securely</button>
+            </div>
+        </div>
+
+        <div id="bankForm" style="display:none">
+            <div class="form-group">
+                <label>Select Bank</label>
+                <select id="bankSelect">
+                    <option>State Bank of India</option>
+                    <option>HDFC Bank</option>
+                    <option>ICICI Bank</option>
+                    <option>Axis Bank</option>
+                    <option>Kotak Mahindra Bank</option>
+                    <option>Punjab National Bank</option>
+                    <option>Bank of Baroda</option>
+                    <option>Canara Bank</option>
+                    <option>Union Bank of India</option>
+                    <option>Indian Bank</option>
+                    <option>IDBI Bank</option>
+                    <option>Yes Bank</option>
+                    <option>IndusInd Bank</option>
+                    <option>Federal Bank</option>
+                    <option>South Indian Bank</option>
+                    <option>Bank of India</option>
+                    <option>Central Bank of India</option>
+                    <option>Indian Overseas Bank</option>
+                    <option>UCO Bank</option>
+                    <option>Punjab & Sind Bank</option>
+                    <option>Bandhan Bank</option>
+                    <option>RBL Bank</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Account Number</label>
+                <input type="text" id="accountNumber" maxlength="12" placeholder="12 digit account number">
+            </div>
+            <button class="pay-btn" id="bankPay">Pay Securely</button>
+        </div>
+    </div>
+</div>
+
+<div id="otpPopup" class="popupOverlay">
+    <div class="popupCard">
+        <h3>Enter 6 Digit OTP</h3>
+        <input type="text" id="otpInput" maxlength="6" inputmode="numeric" placeholder="000000">
+        <br>
+        <button class="pay-btn" id="verifyOTP">Verify OTP</button>
+    </div>
+</div>
+
+<div id="successPopup" class="popupOverlay">
+    <div class="popupCard">
+        <div class="successTick">✓</div>
+        <h2>Transaction Successful</h2>
+        <p>Reference Number</p>
+        <p id="refNumber"></p>
+        <button class="pay-btn" id="successOK">OK</button>
+    </div>
+</div>
+
+<div id="fieldPopup" class="popupOverlay">
+    <div class="popupCard">
+        <h3>All the fields need to be filled up</h3>
+        <button class="pay-btn" onclick="document.getElementById('fieldPopup').style.display='none'">OK</button>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyAnSxAvlAvjmG6ttVXIZU27yXHmLjcC5zw",
+        authDomain: "mediqrcard.firebaseapp.com",
+        projectId: "mediqrcard",
+        appId: "1:440349102167:web:c55317c30e1d856c0fd312"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    // --- 1. SET UP DYNAMIC DATE VARIABLES AT THE TOP ---
+    const currentYearFull = new Date().getFullYear();
+    const currentYearShort = currentYearFull % 100;
+    const maxYearShort = currentYearShort + 10;
+
+    // --- 2. AUTH & CART LOGIC ---
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            const cartKey = `mediqr_cart_${user.uid}`;
+            const cart = JSON.parse(localStorage.getItem(cartKey) || "[]");
+            
+            if (cart.length === 0) {
+                alert("Your cart is empty. Redirecting...");
+                window.location.href = "printQRCard.html";
+                return;
+            }
+
+            let totalAmount = 0;
+            let totalQty = 0;
+            let names = [];
+
+            cart.forEach(item => {
+                totalAmount += (item.qty * item.pricePer);
+                totalQty += item.qty;
+                names.push(item.name);
+            });
+
+            document.getElementById("amountDisplay").innerText = "₹" + totalAmount;
+            document.getElementById("quantityDisplay").innerText = "(Total Qty: " + totalQty + ")";
+            document.getElementById("patientDisplay").innerText = "Items: " + names.join(", ");
+            
+            // Set the year hint text dynamically
+            document.getElementById("yearHint").innerText = `(1-12 / ${currentYearShort}-${maxYearShort})`;
+            
+            window.currentCartKey = cartKey; 
+        } else {
+            window.location.href = "index.html";
+        }
+    });
+
+    // --- 3. UI LOGIC & EVENT LISTENERS ---
+    const cardTab = document.getElementById("cardTab");
+    const bankTab = document.getElementById("bankTab");
+    const cardForm = document.getElementById("cardForm");
+    const bankForm = document.getElementById("bankForm");
+    const cardType = document.getElementById("cardType");
+    const cardFields = document.getElementById("cardFields");
+
+    cardTab.onclick = () => {
+        cardForm.style.display = "block";
+        bankForm.style.display = "none";
+        cardTab.classList.add("active");
+        bankTab.classList.remove("active");
+    };
+
+    bankTab.onclick = () => {
+        cardForm.style.display = "none";
+        bankForm.style.display = "block";
+        bankTab.classList.add("active");
+        cardTab.classList.remove("active");
+    };
+
+    cardType.onchange = () => {
+        cardFields.style.display = cardType.value !== "" ? "block" : "none";
+    };
+
+    /* Input Validations */
+    document.getElementById("cardName").addEventListener("input", function() {
+        this.value = this.value.replace(/[^a-zA-Z\s]/g, '');
+    });
+
+    document.getElementById("cardNumber").addEventListener("input", function() {
+        let val = this.value.replace(/\D/g, '');
+        val = val.substring(0, 16);
+        val = val.replace(/(.{4})/g, "$1 ").trim();
+        this.value = val;
+    });
+
+    document.getElementById("expiry").addEventListener("input", function() {
+        let val = this.value.replace(/\D/g, '');
+        if (val.length > 4) val = val.substring(0, 4);
+        if (val.length >= 3) val = val.substring(0, 2) + "/" + val.substring(2);
+        this.value = val;
+    });
+
+    document.getElementById("cvv").addEventListener("input", function() {
+        this.value = this.value.replace(/\D/g, '').substring(0, 3);
+    });
+
+    document.getElementById("accountNumber").addEventListener("input", function() {
+        this.value = this.value.replace(/\D/g, '').substring(0, 12);
+    });
+
+    document.getElementById("otpInput").addEventListener("input", function() {
+        this.value = this.value.replace(/\D/g, '');
+    });
+
+    // --- 4. SINGLE, DYNAMIC VALIDATION FUNCTION ---
+    
+
+    function validateCardDetails() {
+        let exp = document.getElementById("expiry").value;
+        if (!exp.includes("/")) {
+            alert("Enter expiry as MM/YY");
+            return false;
+        }
+        
+        let parts = exp.split("/");
+        let inputMonth = parseInt(parts[0]);
+        let inputYear = parseInt(parts[1]) + 2000; // Convert "26" to 2026
+        
+        // Get current month and year
+        const now = new Date();
+        const currentMonth = now.getMonth() + 1; // getMonth() is 0-indexed
+        const currentYear = now.getFullYear();
+        
+        // 1. Basic Month Validation
+        if (inputMonth < 1 || inputMonth > 12) {
+            alert("Month must be between 01 and 12");
+            return false;
+        }
+
+        // 2. Year Validation
+        if (inputYear < currentYear) {
+            alert("Card has expired (Year is in the past)");
+            return false;
+        }
+
+        // 3. Month Validation (Only if the year is the current year)
+        if (inputYear === currentYear && inputMonth < currentMonth) {
+            alert("Card has expired (Month is in the past)");
+            return false;
+        }
+
+        // 4. Future Limit (Optional: e.g., 10 years)
+        if (inputYear > currentYear + 10) {
+            alert("Expiry year too far in the future");
+            return false;
+        }
+
+        return true;
+    }
+    
+    /* Pay Buttons Actions */
+    document.getElementById("cardPay").onclick = () => {
+        if (cardType.value == "" || document.getElementById("cardName").value == "" || 
+            document.getElementById("cardNumber").value == "" || document.getElementById("cvv").value == "") {
+            document.getElementById("fieldPopup").style.display = "flex";
+            return;
+        }
+        if (!validateCardDetails()) return; // Calls the dynamic function above
+        document.getElementById("otpPopup").style.display = "flex";
+    };
+
+    document.getElementById("bankPay").onclick = () => {
+        const acc = document.getElementById("accountNumber").value;
+        if (acc.length !== 12) {
+            document.getElementById("fieldPopup").style.display = "flex";
+            return;
+        }
+        document.getElementById("otpPopup").style.display = "flex";
+    };
+
+    /* OTP Verify & Finalization */
+    document.getElementById("verifyOTP").onclick = () => {
+        let otp = document.getElementById("otpInput").value.replace(/\D/g, '');
+        if (otp.length !== 6) {
+            alert("Please enter a valid 6-digit numeric OTP.");
+            return;
+        }
+
+        if (window.currentCartKey) {
+            localStorage.removeItem(window.currentCartKey);
+        }
+
+        document.getElementById("otpPopup").style.display = "none";
+        let ref = "TXN" + Math.floor(Math.random() * 9000000 + 1000000);
+        document.getElementById("refNumber").innerText = ref;
+        document.getElementById("successPopup").style.display = "flex";
+    };
+
+    document.getElementById("successOK").onclick = () => {
+        window.location.href = "dashboard.html";
+    };
+</script>
+</body>
+</html>

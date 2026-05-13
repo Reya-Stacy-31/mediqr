@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediQR | Manage QR Code</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+
+        body {
+            height: 100vh;
+            background: #1a1a1a url("QR-Integrated-Medical-Data2.png") no-repeat center;
+            background-size: cover;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            padding: 40px 30px;
+            border-radius: 20px;
+            width: 360px;
+            text-align: center;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        h2 { color: #1e40af; margin-bottom: 20px; }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 16px;
+            text-transform: uppercase;
+        }
+
+        .btn-fetch {
+            width: 100%;
+            padding: 12px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        #qr-display-area {
+            display: none;
+            margin-top: 20px;
+        }
+
+        #qrcode {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 10px;
+        }
+
+        /* ACTIONS PANEL (TOP RIGHT) */
+        .action-icons {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 12px;
+            display: none; /* Hidden until QR is generated */
+        }
+
+        .icon-btn {
+            cursor: pointer;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 18px;
+            transition: all 0.2s ease;
+            padding: 0;
+        }
+
+        .icon-btn:hover { background: #e2e8f0; transform: scale(1.1); }
+
+        /* REAL WHATSAPP STYLING */
+        .wa-icon { fill: #25D366; } /* Official WA Green */
+
+        .access-info {
+            margin-top: 10px;
+            font-weight: bold;
+            color: #475569;
+            font-size: 14px;
+        }
+
+        .patient-name {
+            color: #1e40af;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="action-icons" id="actions">
+        <button class="icon-btnWA" onclick="shareWhatsApp()" title="Share on WhatsApp">
+            <svg class="wa-icon" viewBox="0 0 448 512" width="24" height="24">
+                <path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L3.9 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7 .9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/>
+            </svg>
+        </button>
+        <button class="icon-btn" onclick="downloadQR()" title="Download QR">📥</button>
+    </div>
+
+    <div id="input-screen">
+        <h2>Retrieve MediQR</h2>
+        <p style="font-size: 13px; color: #64748b; margin-bottom: 15px;">Enter your 8-character Access Code to view and share your QR code.</p>
+        <input type="text" id="accessCodeInput" placeholder="ACCESS CODE" maxlength="8">
+        <button class="btn-fetch" id="fetchBtn" onclick="fetchAndGenerate()">Generate QR</button>
+    </div>
+
+    <div id="qr-display-area">
+        <h3 style="color:#1e40af;">Your Emergency QR</h3>
+        <div id="patientNameDisplay" class="patient-name"></div>
+        
+        <div id="qrcode"></div>
+
+        <div class="access-info">
+            Access Code: <span id="codeText" style="color:#111"></span>
+        </div>
+        
+        
+        <button class="btn-fetch" style="background:#255ca9; margin-top:20px;" onclick="location.reload()">Back</button>
+
+        <button class="btn-fetch" style="background:#db1010; margin-top:10px;" onclick="goDashboard()">Return to Dashboard</button>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-lite.js";
+
+    // --- CONFIGURATION ---
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "mediqrcard.firebaseapp.com",
+        projectId: "mediqrcard",
+        appId: "YOUR_APP_ID"
+    };
+
+    // Twilio Settings (Borrowed from view.html logic)
+    const t_sid = 'ACf35b73f90a9d0e2edd55ff6c7082df6a';
+    const t_enc = 'ZDU5ZWEwYWVjMDI3OGRkMjY1MjQ1OTU4ZTlkYjdhYTA=';
+    const t_sender = 'whatsapp:+14155238886';
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    window.fetchAndGenerate = async function() {
+        const code = document.getElementById("accessCodeInput").value.trim().toUpperCase();
+        const btn = document.getElementById("fetchBtn");
+
+        if (code.length < 8) {
+            alert("Please enter a valid 8-character Access Code.");
+            return;
+        }
+
+        btn.innerText = "Searching...";
+        btn.disabled = true;
+
+        try {
+            const q = query(collection(db, "patients"), where("accessCode", "==", code));
+            const snap = await getDocs(q);
+
+            if (snap.empty) {
+                alert("No record found with this Access Code.");
+                btn.innerText = "Generate QR";
+                btn.disabled = false;
+                return;
+            }
+
+            snap.forEach(docSnap => {
+                const data = docSnap.data();
+                const docId = docSnap.id;
+                
+                // Show UI elements
+                document.getElementById("input-screen").style.display = "none";
+                document.getElementById("qr-display-area").style.display = "block";
+                document.getElementById("actions").style.display = "flex";
+                
+                document.getElementById("patientNameDisplay").innerText = data.name;
+                document.getElementById("codeText").innerText = code;
+
+                // Generate QR
+                const qrBox = document.getElementById("qrcode");
+                qrBox.innerHTML = "";
+                const cloudURL = `https://reya-stacy-31.github.io/mediqr/view.html?id=${docId}`;
+
+                new QRCode(qrBox, {
+                    text: cloudURL,
+                    width: 200,
+                    height: 200,
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+
+                // Store for sharing
+                window.currentPatient = data;
+                window.currentUrl = cloudURL;
+            });
+
+        } catch (error) {
+            alert("Error: " + error.message);
+            btn.innerText = "Generate QR";
+            btn.disabled = false;
+        }
+    };
+
+    window.downloadQR = function() {
+        const img = document.querySelector("#qrcode img");
+        if (img) {
+            const link = document.createElement("a");
+            link.href = img.src;
+            link.download = `MediQR_${window.currentPatient.name}.png`;
+            link.click();
+        }
+    };
+
+   window.shareWhatsApp = async function() {
+        const p = window.currentPatient;
+        const currentUrl = window.currentUrl;
+        
+        // 1. Create a public Image URL for the QR code using an external API
+        // Twilio needs a public URL to fetch the image.
+        const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(currentUrl)}`;
+
+        const message = `Hello ${p.name}, here is your MediQR Profile. 
+        
+In case of emergency, medics can scan this QR or use your Access Code: ${p.accessCode}.
+
+View Profile: ${currentUrl}`;
+
+        const t_token = atob(t_enc);
+        const authHeader = btoa(`${t_sid}:${t_token}`);
+        const cleanPhone = p.phone.replace(/\D/g, '');
+
+        alert("Sending QR Image and details to " + p.phone + " via WhatsApp...");
+
+        try {
+            await fetch(`https://api.twilio.com/2010-04-01/Accounts/${t_sid}/Messages.json`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Authorization': `Basic ${authHeader}`
+                },
+                body: new URLSearchParams({
+                    'To': `whatsapp:+${cleanPhone}`,
+                    'From': t_sender,
+                    'Body': message,
+                    'MediaUrl': qrImageUrl  // This sends the QR as an actual image
+                })
+            });
+            alert("WhatsApp QR Image Sent Successfully!");
+        } catch (e) {
+            alert("Twilio Error: " + e.message);
+        }
+    };
+
+    window.goDashboard = function(){
+    window.location.href = "dashboard.html";
+};
+</script>
+
+</body>
+</html>

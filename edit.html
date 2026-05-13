@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Edit MediQR Profile</title>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;}
+
+body{
+height:100vh;
+background:#1a1a1a url("QR-Integrated-Medical-Data2.png") no-repeat center;
+background-size:cover;
+display:flex;
+justify-content:center;
+align-items:center;
+}
+
+#access-popup-overlay{
+position:fixed;top:0;left:0;width:100%;height:100%;
+background:rgba(0,0,0,0.9);
+display:flex;justify-content:center;align-items:center;z-index:3000;
+}
+
+.access-box{
+background:white;padding:35px;border-radius:12px;width:320px;text-align:center;
+}
+
+.access-box input{
+width:100%;padding:12px;margin:15px 0;border:1px solid #ccc;border-radius:6px;
+text-align:center;letter-spacing:2px;font-weight:bold;
+}
+
+.center-strip{
+width:420px;height:100vh;
+background:rgba(255,255,255,0.98);
+overflow-y:auto;
+box-shadow:0 0 25px rgba(0,0,0,0.5);
+display:none;
+}
+
+.form-box{width:340px;padding:40px 0;margin:auto;}
+
+.form-box h2{
+text-align:center;margin-bottom:20px;color:#1e40af;font-size:22px;
+}
+
+.form-box input,
+.form-box textarea,
+.form-box select{
+width:100%;
+padding:12px;
+margin:8px 0;
+border:1px solid #cbd5e1;
+border-radius:8px;
+font-size:14px;
+outline:none;
+}
+
+textarea{resize:none;height:60px;}
+
+.section-label{
+font-size:11px;
+color:#1e40af;
+font-weight:bold;
+margin-top:15px;
+text-transform:uppercase;
+}
+
+.pin-label{color:#dc2626;}
+
+#updateBtn{
+width:100%;
+padding:14px;
+margin-top:20px;
+border:none;
+border-radius:8px;
+background:#16a34a;
+color:white;
+font-size:16px;
+font-weight:600;
+cursor:pointer;
+display:none;
+}
+
+#welcome-overlay{
+display:none;
+position:fixed;
+top:0;left:0;width:100%;height:100%;
+background:rgba(0,0,0,0.7);
+justify-content:center;
+align-items:center;
+z-index:2000;
+}
+
+.popup-content{
+background:white;
+padding:40px 30px;
+border-radius:12px;
+width:380px;
+text-align:center;
+}
+
+.phone-example{
+font-weight:800;
+font-size:18px;
+color:#333;
+margin:10px 0 25px 0;
+}
+
+.blue-btn{
+background:#0ea5e9;
+color:white;
+border:none;
+width:100%;
+padding:15px;
+border-radius:10px;
+font-size:18px;
+font-weight:bold;
+cursor:pointer;
+}
+
+#success-overlay{
+display:none;
+position:fixed;
+top:0;left:0;width:100%;height:100%;
+background:rgba(0,0,0,0.8);
+justify-content:center;
+align-items:center;
+z-index:4000;
+}
+
+.success-box{
+background:white;
+padding:40px;
+border-radius:12px;
+width:360px;
+text-align:center;
+}
+
+.success-circle{
+width:80px;height:80px;border-radius:50%;
+background:#16a34a;
+display:flex;
+align-items:center;
+justify-content:center;
+margin:auto;margin-bottom:20px;
+}
+
+.success-circle span{color:white;font-size:42px;}
+</style>
+</head>
+
+<body>
+
+<div id="access-popup-overlay">
+<div class="access-box">
+<h3 style="color:#062a4f">Enter Access Code</h3>
+<input type="text" id="accessCodeInput" maxlength="8" placeholder="8-Digit Code" style="text-transform:uppercase">
+<button class="blue-btn" id="fetchBtn">Verify & Load</button>
+<button class="blue-btn" style="background:#ef4444;margin-top:10px;" onclick="location.href='dashboard.html'">Cancel</button>
+</div>
+</div>
+
+<div id="welcome-overlay">
+<div class="popup-content">
+<h1>Update Notice</h1>
+<p>You are editing an existing MediQR record.</p>
+<p style="font-weight:bold;color:#374151;">Phone numbers must include country code.</p>
+<p class="phone-example">916475823543</p>
+<button class="blue-btn" onclick="closeNotice()">Got it!</button>
+</div>
+</div>
+
+<div class="center-strip" id="main-content">
+<div class="form-box">
+
+<h2>Edit MediQR Profile</h2>
+
+<input id="pName" placeholder="Full Name" onkeyup="checkForm()">
+
+<input id="pPhone" maxlength="12" placeholder="Patient Phone (incl. Country Code)" onkeyup="checkForm()">
+
+<input id="pAge" type="number" placeholder="Age (0-125)" min="0" max="125" oninput="validateAge(this)" onkeyup="checkForm()">
+
+<select id="pBlood" onchange="checkForm()">
+<option value="">Select Blood Group</option>
+<option>A+</option><option>A-</option>
+<option>B+</option><option>B-</option>
+<option>AB+</option><option>AB-</option>
+<option>O+</option><option>O-</option>
+</select>
+
+<input id="pAadhar" maxlength="14" placeholder="Aadhaar Number" onkeyup="formatAadhar()">
+
+<textarea id="pAllergies" placeholder="Allergies" onkeyup="checkForm()"></textarea>
+<textarea id="pConditions" placeholder="Medical Conditions" onkeyup="checkForm()"></textarea>
+<textarea id="pMedication" placeholder="Current Medication" onkeyup="checkForm()"></textarea>
+
+<p class="section-label">Emergency Contact 1</p>
+
+<input id="cname1" placeholder="Contact Name" onkeyup="checkForm()">
+<input id="cphone1" maxlength="12" placeholder="Phone" onkeyup="checkForm()">
+<input id="crel1" placeholder="Relationship" onkeyup="checkForm()">
+
+<p class="section-label">Emergency Contact 2</p>
+
+<input id="cname2" placeholder="Contact Name" onkeyup="checkForm()">
+<input id="cphone2" maxlength="12" placeholder="Phone" onkeyup="checkForm()">
+<input id="crel2" placeholder="Relationship" onkeyup="checkForm()">
+
+<p class="section-label pin-label">Security Lock (Tier 2)</p>
+
+<input id="pPin" maxlength="6" placeholder="6 Digit PIN" onkeyup="checkForm()">
+
+<button id="updateBtn" onclick="updateRecord()">Update Record</button>
+
+</div>
+</div>
+
+<div id="success-overlay">
+<div class="success-box">
+<div class="success-circle"><span>✓</span></div>
+<h3 style="color:#16a34a;margin-bottom:10px;">Success</h3>
+<p style="margin-bottom:25px;">Record has been successfully updated</p>
+<button class="blue-btn" onclick="goDashboard()">Return To Dashboard</button>
+<button class="blue-btn" style="background:#2563eb;margin-top:10px;" onclick="updateAnother()">Update Another Record</button>
+</div>
+</div>
+
+<script>
+
+function validateAge(input){
+if(input.value!==""){
+let val=parseInt(input.value);
+if(val<0)input.value=0;
+if(val>125)input.value=125;
+}
+}
+
+function formatAadhar(){
+let input=document.getElementById("pAadhar");
+let val=input.value.replace(/\D/g,'').substring(0,12);
+let parts=val.match(/.{1,4}/g);
+input.value=parts?parts.join(" "):"";
+checkForm();
+}
+
+</script>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, query, where, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-lite.js";
+
+const firebaseConfig={
+apiKey:"YOUR_API_KEY",
+authDomain:"mediqrcard.firebaseapp.com",
+projectId:"mediqrcard",
+appId:"YOUR_APP_ID"
+};
+
+const app=initializeApp(firebaseConfig);
+const db=getFirestore(app);
+
+let documentID=null;
+
+document.getElementById('fetchBtn').addEventListener('click',loadRecord);
+
+async function loadRecord(){
+
+const code=document.getElementById('accessCodeInput').value.trim().toUpperCase();
+
+if(code.length!==8){
+alert("Please enter valid 8-digit code");
+return;
+}
+
+const q=query(collection(db,"patients"),where("accessCode","==",code));
+const snap=await getDocs(q);
+
+if(snap.empty){
+alert("Invalid Access Code. Please try again.");
+return;
+}
+
+snap.forEach(docSnap=>{
+
+documentID=docSnap.id;
+const data=docSnap.data();
+
+pName.value=data.name||"";
+pPhone.value=data.phone||"";
+pAge.value=data.age||"";
+pBlood.value=data.blood||"";
+pAadhar.value=data.aadhar||"";
+pAllergies.value=data.allergies||"";
+pConditions.value=data.conditions||"";
+pMedication.value=data.medication||"";
+cname1.value=data.contact1_name||"";
+cphone1.value=data.contact1_phone||"";
+crel1.value=data.contact1_rel||"";
+cname2.value=data.contact2_name||"";
+cphone2.value=data.contact2_phone||"";
+crel2.value=data.contact2_rel||"";
+pPin.value=data.pin||"";
+
+});
+
+document.getElementById("access-popup-overlay").style.display="none";
+document.getElementById("welcome-overlay").style.display="flex";
+
+checkForm();
+}
+
+window.closeNotice=function(){
+document.getElementById("welcome-overlay").style.display="none";
+document.getElementById("main-content").style.display="block";
+}
+
+window.checkForm=function(){
+
+const phone=pPhone.value.trim();
+const c1=cphone1.value.trim();
+const c2=cphone2.value.trim();
+const pin=pPin.value.trim();
+const aadhar=pAadhar.value.trim();
+
+const isPhoneValid=phone.length===12;
+const isC1Valid=c1.length===12;
+const isC2Valid=c2.length===12;
+const isPinValid=pin.length===6;
+const isAadharValid=aadhar.length===14;
+
+const inputs=[...document.querySelectorAll(".form-box input,.form-box textarea,.form-box select")];
+const allFilled=inputs.every(i=>i.value.trim()!=="")
+
+const ready=allFilled && isPhoneValid && isC1Valid && isC2Valid && isPinValid && isAadharValid;
+
+updateBtn.style.display=ready?"block":"none";
+}
+
+window.updateRecord=async function(){
+
+if(cphone1.value===cphone2.value){
+alert("Emergency contact numbers cannot be the same!");
+return;
+}
+
+const ref=doc(db,"patients",documentID);
+
+await updateDoc(ref,{
+name:pName.value,
+phone:pPhone.value,
+age:parseInt(pAge.value),
+blood:pBlood.value,
+aadhar:pAadhar.value,
+allergies:pAllergies.value,
+conditions:pConditions.value,
+medication:pMedication.value,
+contact1_name:cname1.value,
+contact1_phone:cphone1.value,
+contact1_rel:crel1.value,
+contact2_name:cname2.value,
+contact2_phone:cphone2.value,
+contact2_rel:crel2.value,
+pin:pPin.value
+});
+
+document.getElementById("success-overlay").style.display="flex";
+}
+
+window.goDashboard=()=>location.href="dashboard.html";
+window.updateAnother=()=>location.href="edit.html";
+
+</script>
+
+</body>
+</html>

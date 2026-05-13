@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order MediQR Card</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
+
+        body {
+            height:100vh;
+            background-image:url("QR-Integrated-Medical-Data3.png");
+            background-size:100% 100%;
+            background-position:center;
+            background-repeat:no-repeat;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            overflow:hidden;
+        }
+
+        /* POPUPS BASE */
+        #code-popup, #orderPopup, #cartPopup {
+            display:none;
+            position:fixed;
+            top:0; left:0; width:100%; height:100%;
+            backdrop-filter:blur(8px);
+            justify-content:center;
+            align-items:center;
+            z-index:1000;
+        }
+
+        #code-popup { display:flex; } 
+
+        .popup-box, .order-box, .cart-box {
+            background:white;
+            padding:30px;
+            border-radius:15px;
+            width:360px;
+            text-align:center;
+            box-shadow:0 15px 35px rgba(0,0,0,0.4);
+        }
+
+        .cart-box { width: 500px; max-height: 90vh; overflow-y: auto; }
+
+        /* INPUTS */
+        input[type="text"], select {
+            width:100%; padding:12px; border:2px solid #3b82f6;
+            border-radius:8px; font-size:18px; margin-bottom:20px; outline:none;
+        }
+
+        .popup-btn, .btn-primary {
+            width:100%; padding:12px; background:#3b82f6; color:white;
+            font-weight:700; border:none; border-radius:8px; cursor:pointer;
+        }
+
+        /* CARD PREVIEW */
+        #cardWrapper {
+            display:none; position:relative; width:550px; height:340px;
+            background-image:url("MediQR.png"); background-size:100% 100%;
+            border-radius:18px; box-shadow:0 25px 60px rgba(0,0,0,0.6);
+        }
+
+        .name-overlay { position:absolute; top:7mm; left:25px; color:white; font-size:22px; font-weight:800; text-shadow:2px 2px 4px rgba(0,0,0,0.6); }
+        .code-overlay { position:absolute; top:14mm; left:25px; color:white; font-size:14px; opacity:0.95; }
+        #qr-container {
+            position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+            width:4.5cm; height:4.5cm; display:flex; justify-content:center;
+            align-items:center; background:white; padding:4px; border-radius:8px;
+        }
+
+        /* CART LIST STYLES */
+        .cart-item {
+            display: flex; align-items: center; gap: 12px; padding: 15px 0;
+            border-bottom: 1px solid #eee; text-align: left;
+        }
+        .mini-thumb {
+            width: 70px; height: 45px; background: #0b3a75; border-radius: 4px;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 10px; font-weight: bold; flex-shrink: 0;
+        }
+        .item-info { flex: 1; }
+        .qty-input { width: 60px !important; padding: 5px !important; margin: 5px 0 0 0 !important; font-size: 14px !important; border: 1px solid #ccc !important; border-radius: 4px; }
+        .remove-btn { color: #dc3545; cursor: pointer; font-size: 22px; font-weight: bold; margin-left: 10px; border:none; background:none; line-height: 1; }
+
+        .btn-order { padding:12px 40px; background:#0b3a75; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; }
+
+        @media print {
+            #code-popup, #orderPopup, #cartPopup, .print-controls { display:none !important; }
+            #cardWrapper { position:fixed; top:0; left:0; display:block !important; box-shadow:none; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="code-popup">
+    <div class="popup-box">
+        <h3>Enter Access Code</h3>
+        <p style="font-size:14px;color:#666;margin-bottom:10px;">Verify identity to generate physical card</p>
+        <input type="text" id="accessInput" maxlength="8" placeholder="D8Q3K5LB">
+        <button class="popup-btn" id="viewBtn">View My Card</button>
+    </div>
+</div>
+
+<div style="text-align:center;">
+    <div id="cardWrapper">
+        <div class="name-overlay" id="userName">---</div>
+        <div class="code-overlay">Access Code: <span id="userCode">--------</span></div>
+        <div id="qr-container"></div>
+    </div>
+
+    <div class="print-controls" id="printArea" style="margin-top:30px; display:none;">
+        <button class="btn-order" onclick="openOrderPopup()">Add to Cart</button>
+    </div>
+</div>
+
+<div id="orderPopup">
+    <div class="order-box">
+        <h3>Select Quantity</h3>
+        <select id="qtySelect" style="margin-top:15px;">
+            <option value="1">1 Card</option>
+            <option value="2">2 Cards</option>
+            <option value="3">3 Cards</option>
+            <option value="4">4 Cards</option>
+        </select>
+        <p>Price: <b>₹200</b> / card</p>
+        <button class="btn-primary" style="margin-top:15px; background:#0b3a75;" onclick="addToCart()">Add to Cart</button>
+        <button onclick="closePopups()" style="margin-top:10px; border:none; background:none; cursor:pointer; color:gray;">Cancel</button>
+    </div>
+</div>
+
+<div id="cartPopup">
+    <div class="cart-box">
+        <h3 style="margin-bottom:20px; color:#0b3a75;">Cart Summary</h3>
+        <div id="cartItemsList"></div>
+        <div style="margin-top:20px; padding-top:15px; border-top:2px solid #0b3a75; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size:18px; font-weight:bold;">Grand Total:</span>
+            <span id="grandTotal" style="font-size:22px; font-weight:800; color:#0b3a75;">₹0</span>
+        </div>
+        <button id="addAnotherBtn" onclick="addAnother()" 
+            style="margin-top:20px; width:100%; padding:12px; background:#3b82f6; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
+            + Add Another Card
+        </button>
+        <button onclick="goToCheckout()" 
+            style="margin-top:10px; width:100%; padding:12px; background:#0b3a75; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
+            Proceed to Checkout
+        </button>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-lite.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyAnSxAvlAvjmG6ttVXIZU27yXHmLjcC5zw",
+        authDomain: "mediqrcard.firebaseapp.com",
+        projectId: "mediqrcard",
+        storageBucket: "mediqrcard.firebasestorage.app",
+        messagingSenderId: "440349102167",
+        appId: "1:440349102167:web:c55317c30e1d856c0fd312",
+        measurementId: "G-5VK4P2B9LZ"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    let cartKey = "mediqr_cart_guest"; // Default fallback
+
+    // --- AUTH PROTECTION & CART ISOLATION ---
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            cartKey = `mediqr_cart_${user.uid}`;
+            console.log("Authenticated User:", user.email);
+        } else {
+            // If user isn't logged in, send them back to login page
+            window.location.href = "index.html"; 
+        }
+    });
+
+    /* --- FETCH PATIENT DATA --- */
+    document.getElementById("viewBtn").addEventListener("click", async () => {
+        const code = document.getElementById("accessInput").value.trim().toUpperCase();
+        if(code.length !== 8) {
+            alert("Please enter a valid 8-digit access code.");
+            return;
+        }
+
+        const q = query(collection(db, "patients"), where("accessCode", "==", code));
+        const snap = await getDocs(q);
+
+        if(snap.empty) {
+            alert("Invalid Access Code.");
+            return;
+        }
+
+        snap.forEach(docSnap => {
+            const data = docSnap.data();
+            document.getElementById("userName").innerText = data.name;
+            document.getElementById("userCode").innerText = code;
+            document.getElementById("qr-container").innerHTML = "";
+
+            const cloudURL = `https://reya-stacy-31.github.io/mediqr/view.html?id=${docSnap.id}`;
+            new QRCode(document.getElementById("qr-container"), {
+                text: cloudURL,
+                width: 170,
+                height: 170,
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        });
+
+        document.getElementById("code-popup").style.display = "none";
+        document.getElementById("cardWrapper").style.display = "block";
+        document.getElementById("printArea").style.display = "block";
+    });
+
+    /* --- CART LOGIC (USER ISOLATED) --- */
+    window.closePopups = () => {
+        document.getElementById("orderPopup").style.display = "none";
+        document.getElementById("cartPopup").style.display = "none";
+    };
+
+    window.openOrderPopup = () => {
+        const cart = JSON.parse(localStorage.getItem(cartKey) || "[]");
+        if(cart.length >= 4) {
+            renderCart();
+            return;
+        }
+        document.getElementById("orderPopup").style.display = "flex";
+    };
+
+    window.addToCart = () => {
+        const name = document.getElementById("userName").innerText;
+        const qty = parseInt(document.getElementById("qtySelect").value);
+        let cart = JSON.parse(localStorage.getItem(cartKey) || "[]");
+
+        if(cart.length >= 4) {
+            renderCart();
+            return;
+        }
+
+        cart.push({
+            id: Date.now(),
+            name: name,
+            qty: qty,
+            pricePer: 200
+        });
+
+        localStorage.setItem(cartKey, JSON.stringify(cart));
+        document.getElementById("orderPopup").style.display = "none";
+        renderCart();
+    };
+
+    window.updateQty = (id, newQty) => {
+        let cart = JSON.parse(localStorage.getItem(cartKey) || "[]");
+        const item = cart.find(i => i.id === id);
+        if(item) {
+            item.qty = Math.max(1, parseInt(newQty) || 1);
+            localStorage.setItem(cartKey, JSON.stringify(cart));
+            renderCart();
+        }
+    };
+
+    window.removeItem = (id) => {
+        let cart = JSON.parse(localStorage.getItem(cartKey) || "[]");
+        cart = cart.filter(item => item.id !== id);
+        localStorage.setItem(cartKey, JSON.stringify(cart));
+        renderCart();
+    };
+
+    window.renderCart = () => {
+        const cart = JSON.parse(localStorage.getItem(cartKey) || "[]");
+        const list = document.getElementById("cartItemsList");
+        const addBtn = document.getElementById("addAnotherBtn");
+        let grandTotal = 0;
+
+        list.innerHTML = cart.length === 0 ? "<p style='color:#666;'>Your cart is empty.</p>" : "";
+
+        cart.forEach(item => {
+            const itemTotal = item.qty * item.pricePer;
+            grandTotal += itemTotal;
+
+            const div = document.createElement("div");
+            div.className = "cart-item";
+            div.innerHTML = `
+                <div class="mini-thumb">MediQR</div>
+                <div class="item-info">
+                    <div style="font-weight:bold; color:#0b3a75;">${item.name}</div>
+                    <div style="font-size:12px; color:#555;">
+                        Qty: <input type="number" class="qty-input" value="${item.qty}" min="1" max="10" onchange="updateQty(${item.id}, this.value)">
+                        × ₹${item.pricePer}
+                    </div>
+                </div>
+                <div style="font-weight:bold;">₹${itemTotal}</div>
+                <button class="remove-btn" onclick="removeItem(${item.id})" title="Remove">×</button>
+            `;
+            list.appendChild(div);
+        });
+
+        document.getElementById("grandTotal").innerText = `₹${grandTotal}`;
+        document.getElementById("cartPopup").style.display = "flex";
+
+        if(cart.length >= 4) {
+            addBtn.disabled = true;
+            addBtn.style.background = "#ccc";
+            addBtn.style.cursor = "not-allowed";
+            addBtn.innerText = "Cart Full (Max 4 Cards)";
+        } else {
+            addBtn.disabled = false;
+            addBtn.style.background = "#3b82f6";
+            addBtn.style.cursor = "pointer";
+            addBtn.innerText = "+ Add Another Card";
+        }
+    };
+
+    window.addAnother = () => {
+        // Redirect to self to clear the view but keep auth state
+        window.location.href = "printQRCard.html";
+    };
+
+   window.goToCheckout = () => {
+    const cart = JSON.parse(localStorage.getItem(cartKey) || "[]");
+    if(cart.length === 0) {
+        alert("Please add at least one card to proceed.");
+        return;
+    }
+    // We don't need to pass params in the URL because checkout.html 
+    // will read the same localStorage key!
+    window.location.href = "checkout.html";
+};
+</script>
+
+</body>
+</html>

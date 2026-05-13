@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create MediQR Account</title>
+
+<style>
+    * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; }
+    
+    body,html { height:100%; width:100%; overflow:hidden;}
+    
+    body {
+        background-image:url("QR-Integrated-Medical-Data.png");
+        background-repeat:no-repeat; 
+        background-position:center; 
+        background-size:100% 100%;
+        background-color:#062a4f; 
+        display:flex; 
+        justify-content:center; 
+        align-items:center;
+    }
+
+    .signup-box { 
+        width:280px; 
+        text-align:center; 
+        transform: translateY(10px);
+    }
+
+    .signup-box input { 
+        width:100%; 
+        padding:10px; 
+        margin:5px 0; 
+        border:none; 
+        border-radius:4px; 
+        background:#f0f4f8; 
+        font-size:14px; 
+        outline: none;
+    }
+
+    button#submitBtn { 
+        width:100%; 
+        padding:10px; 
+        margin-top:6px; 
+        border:none; 
+        border-radius:4px; 
+        background:#3b82f6; 
+        color:white; 
+        font-size:15px; 
+        font-weight:600; 
+        cursor:pointer; 
+        display:none; /* Hidden until validation passes */
+    }
+
+    button#submitBtn:hover { background:#2563eb; }
+    button#submitBtn:disabled { background:#64748b; cursor:not-allowed; }
+
+    .message { 
+        font-size:12px; 
+        margin: 8px 0; 
+        min-height: 15px;
+        font-weight: 500;
+    }
+
+    /* --- SUCCESS MODAL STYLES --- */
+    .modal-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.7); 
+        display: none; 
+        justify-content: center; 
+        align-items: center; 
+        z-index: 1000;
+    }
+    .modal-content {
+        background: white; padding: 30px; border-radius: 12px;
+        text-align: center; width: 280px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+    .success-icon {
+        width: 60px; height: 60px; border: 3px solid #4CAF50;
+        border-radius: 50%; display: flex; justify-content: center;
+        align-items: center; margin: 0 auto 15px; color: #4CAF50;
+        font-size: 35px; font-weight: bold;
+    }
+    .modal-content h3 { color: #333; font-size: 18px; margin-bottom: 10px; }
+    .modal-content p { color: #666; font-size: 14px; margin-bottom: 20px; }
+    
+    .modal-btn {
+        background: #4CAF50; color: white; border: none;
+        padding: 10px 25px; border-radius: 5px; cursor: pointer;
+        font-weight: 600; display: block; width: 100%;
+    }
+</style>
+</head>
+
+<body>
+
+<div class="signup-box">
+    <input type="text" id="name" placeholder="Full Name" autocomplete="name">
+    <input type="email" id="email" placeholder="Email" autocomplete="email">
+    
+    <input type="tel" id="phone" placeholder="916544389733 (12 Digits)" maxlength="12" onkeyup="checkValidation()">
+    
+    <input type="password" id="password" placeholder="Password" onkeyup="checkValidation()">
+    <input type="password" id="confirm" placeholder="Confirm Password" onkeyup="checkValidation()">
+    
+    <div class="message" id="msg"></div>
+    
+    <button id="submitBtn" onclick="createAccount()">Submit</button>
+</div>
+
+<div class="modal-overlay" id="successModal">
+    <div class="modal-content">
+        <div class="success-icon">✓</div>
+        <h3>Success!</h3>
+        <p>Account has been created Successfully</p>
+        <button class="modal-btn" onclick="goToLogin()">OK</button>
+    </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+// Integrated Firestore for database storage
+import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-lite.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyAnSxAvlAvjmG6ttVXIZU27yXHmLjcC5zw",
+    authDomain: "mediqrcard.firebaseapp.com",
+    projectId: "mediqrcard",
+    storageBucket: "mediqrcard.firebasestorage.app",
+    messagingSenderId: "440349102167",
+    appId: "1:440349102167:web:c55317c30e1d856c0fd312"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+window.checkValidation = function() {
+    const phone = document.getElementById("phone").value;
+    const pass = document.getElementById("password").value;
+    const confirm = document.getElementById("confirm").value;
+    const msg = document.getElementById("msg");
+    const btn = document.getElementById("submitBtn");
+
+    btn.style.display = "none";
+
+    const phoneRegex = /^\d{12}$/;
+    if (!phoneRegex.test(phone)) {
+        msg.style.color = "#ffb74d"; 
+        msg.innerHTML = "Phone must be exactly 12 digits";
+        return;
+    }
+
+    if(pass.length < 6) {
+        msg.style.color = "#ffb74d";
+        msg.innerHTML = "Password: min 6 characters";
+        return;
+    }
+
+    if(pass !== confirm) {
+        msg.style.color = "#ef5350"; 
+        msg.innerHTML = "Passwords do not match";
+        return;
+    }
+
+    msg.style.color = "#81c784"; 
+    msg.innerHTML = "Details Validated";
+    btn.style.display = "block";
+}
+
+window.createAccount = async function() {
+    const name = document.getElementById("name").value;
+    const email = document.getElementById("email").value;
+    const phone = document.getElementById("phone").value;
+    const password = document.getElementById("password").value;
+    const btn = document.getElementById("submitBtn");
+
+    btn.disabled = true;
+    btn.innerText = "Creating Account...";
+
+    try {
+        // 1. Create Auth Account
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const uid = userCredential.user.uid;
+
+        // 2. Save to 'logins' Database Table
+        // This makes the user searchable by email in forgot.html
+        await setDoc(doc(db, "logins", uid), {
+            name: name,
+            email: email,
+            mobile: phone,
+            passwd: password 
+        });
+
+        document.getElementById("successModal").style.display = "flex";
+    } catch (error) {
+        alert("Registration Error: " + error.message);
+        btn.disabled = false;
+        btn.innerText = "Submit";
+    }
+}
+
+window.goToLogin = function() {
+    window.location.href = "index.html";
+}
+</script>
+
+</body>
+</html>

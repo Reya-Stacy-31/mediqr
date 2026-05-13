@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recover Access - MediQR</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body, html { height: 100%; width: 100%; overflow: hidden; }
+        body {
+            background-image: url("QR-Integrated-Medical-Data.png");
+            background-repeat: no-repeat; background-position: center;
+            background-size: 100% 100%; background-color: #062a4f;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .login-box {
+            width: 280px; text-align: center; transform: translateY(15px);
+            background: rgba(255, 255, 255, 0.1); padding: 25px; border-radius: 12px;
+            backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .login-box h2 { color: #3b82f6; margin-bottom: 15px; font-size: 18px; font-weight: 700; }
+        .login-box input {
+            width: 100%; padding: 12px; margin: 8px 0; border: none;
+            border-radius: 6px; background: #f0f4f8; font-size: 14px; outline: none;
+        }
+        .login-box button {
+            width: 100%; padding: 12px; margin-top: 10px; border: none;
+            border-radius: 6px; background: #25d366; color: white;
+            font-size: 15px; font-weight: 600; cursor: pointer;
+        }
+        .links { margin-top: 15px; }
+        .links a { text-decoration: none; color: #3b82f6; font-size: 12px; }
+
+        /* Popup Styles */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); display: none;
+            justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal-content { 
+            background: white; padding: 30px; border-radius: 15px; 
+            text-align: center; width: 300px; 
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-box">
+    <h2>Recover Access</h2>
+    <input type="email" id="resetEmail" placeholder="Registered Email ID">
+    <button id="sendBtn" onclick="handleRecovery()">Send WhatsApp Reset</button>
+    <div class="links">
+        <a href="index.html">← Back to Login</a>
+    </div>
+</div>
+
+<div class="modal-overlay" id="popup">
+    <div class="modal-content">
+        <h3 style="color: #062a4f;">PIN Dispatched</h3>
+        <p id="popupMsg" style="font-size: 14px; margin: 15px 0; color: #555;"></p>
+        <button onclick="window.location.href='reset.html'" style="width:100%; padding:10px; background:#3b82f6; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600;">Proceed to Reset</button>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-lite.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyAnSxAvlAvjmG6ttVXIZU27yXHmLjcC5zw",
+        authDomain: "mediqrcard.firebaseapp.com",
+        projectId: "mediqrcard",
+        storageBucket: "mediqrcard.firebasestorage.app",
+        messagingSenderId: "440349102167",
+        appId: "1:440349102167:web:c55317c30e1d856c0fd312"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Twilio Credentials
+    const t_sid = 'ACf35b73f90a9d0e2edd55ff6c7082df6a';
+    const t_enc = 'ZDU5ZWEwYWVjMDI3OGRkMjY1MjQ1OTU4ZTlkYjdhYTA=';
+    const t_sender = 'whatsapp:+14155238886';
+
+    window.handleRecovery = async function() {
+        const email = document.getElementById("resetEmail").value.trim();
+        const btn = document.getElementById("sendBtn");
+
+        if (!email) { alert("Please enter your email."); return; }
+
+        btn.disabled = true;
+        btn.innerText = "Verifying...";
+
+        try {
+            // Search the 'logins' table for the user
+            const q = query(collection(db, "logins"), where("email", "==", email));
+            const querySnapshot = await getDocs(q);
+
+            if (querySnapshot.empty) {
+                alert("Account not found in the 'logins' database. Ensure this email was used during signup.");
+                btn.disabled = false;
+                btn.innerText = "Send WhatsApp Reset";
+                return;
+            }
+
+            const userDoc = querySnapshot.docs[0];
+            const userData = userDoc.data();
+            const mobile = userData.mobile;
+            const docId = userDoc.id;
+
+            // Generate PIN
+            const tempPin = Math.floor(100000 + Math.random() * 900000).toString();
+            localStorage.setItem("resetPin", tempPin); 
+            localStorage.setItem("targetUserDocId", docId);
+
+            console.log("PIN Saved to LocalStorage:", tempPin);
+
+            // Send WhatsApp
+            const t_token = atob(t_enc);
+            const authHeader = btoa(`${t_sid}:${t_token}`);
+
+            await fetch(`https://api.twilio.com/2010-04-01/Accounts/${t_sid}/Messages.json`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Authorization': `Basic ${authHeader}`
+                },
+                body: new URLSearchParams({
+                    'To': `whatsapp:+${mobile}`,
+                    'From': t_sender,
+                    'Body': `MediQR Secure Reset: Your temporary PIN is ${tempPin}.`
+                })
+            });
+
+            document.getElementById("popupMsg").innerHTML = `Temporary Reset PIN has been sent to registered mobile number <b>+${mobile}</b> for password resetting.`;
+            document.getElementById("popup").style.display = "flex";
+
+        } catch (error) {
+            console.error(error);
+            alert("System Error: " + error.message);
+            btn.disabled = false;
+        }
+    };
+</script>
+</body>
+</html>
